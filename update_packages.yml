@@ -1,0 +1,39 @@
+---
+- name: Update packages on SUSE Linux servers
+  hosts: suse_servers
+  gather_facts: false
+  become: yes
+  become_method: sudo
+
+  vars_prompt:
+    - name: proceed_with_update
+      prompt: "Updates are available. Do you want to proceed with the update? (y/n)"
+      private: no
+
+  tasks:
+    - name: Check for available updates
+      command: zypper list-updates
+      register: update_result
+      changed_when: false
+
+    - name: Display available updates
+      debug:
+        var: update_result.stdout_lines
+
+    - name: Prompt user for update confirmation
+      pause:
+        prompt: "Press 'y' to proceed with the update, or 'n' to skip the update"
+      when: update_result.stdout_lines
+      register: user_confirmation
+
+    - name: Update packages
+      zypper:
+        name: "*"
+        state: latest
+        update_cache: yes
+      when: update_result.stdout_lines and (user_confirmation.user_input | default('n')) == 'y'
+
+    - name: No updates available
+      debug:
+        msg: "No updates available on {{ inventory_hostname }}"
+      when: not update_result.stdout_lines

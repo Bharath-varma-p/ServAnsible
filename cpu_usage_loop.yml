@@ -1,0 +1,19 @@
+---
+- name: Fetch CPU usage every second
+  hosts: suse_servers
+  gather_facts: false
+  tasks:
+    - name: Get CPU usage
+      shell: top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4}'
+      register: cpu_usage
+
+    - name: Display CPU usage
+      debug:
+        msg: "{{ inventory_hostname }}: {{ cpu_usage.stdout }}%"
+
+    - name: Pause for 1 second
+      pause:
+        seconds: 1
+
+    - name: Loop to fetch CPU usage every second
+      include_tasks: cpu_usage_loop.yml
